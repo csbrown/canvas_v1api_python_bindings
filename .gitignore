@@ -1,6 +1,7 @@
 *.bkp
 *.csv
 *.ipynb
+canvas
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

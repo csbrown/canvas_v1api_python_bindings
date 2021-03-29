@@ -76,6 +76,7 @@ async function investigate_under_char_limit_multiple(q_ids, char_limits, comment
 }
 
 async function fix_broken_fill_in_blank(q_id, which_blank, worth, correct_answer, comment, parent) {
+    // which_blank is 0 indexed
     var question_el = get_question_element(q_id, parent);
     var current_points_el = question_el.getElementsByClassName("question_input_hidden")[0];
     var answer = question_el.getElementsByClassName("question_input")[which_blank + 1].value;

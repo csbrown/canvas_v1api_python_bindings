@@ -114,9 +114,14 @@ async function all_students_apply(f, score_updates=true) {
 
 }
 
+// give_max_points(["1234567", "2345678"], ["comment 1", "comment 2"]);
 async function give_max_points(question_ids, comments) {
     await all_students_apply(full_credit_multiple.bind(null, question_ids, comments));    
 }
+// gives full credit if more than char_limit 
+// forces TA to grade if less than char_limit
+// backslash key continues script
+// investigate_essays(["1234567", "2345678"], [40, 40], ["comment 1", "comment 2"])
 async function investigate_essays(question_ids, char_limits, comments) {
     await all_students_apply(investigate_under_char_limit_multiple.bind(null, question_ids, char_limits, comments));    
 }

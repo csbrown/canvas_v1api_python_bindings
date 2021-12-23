@@ -71,6 +71,36 @@ class CourseAPI(CanvasAPI):
         self.course_id = course_id
         self.course_url = CourseAPI.COURSE_URL_FORMAT.format(course_id = course_id)
 
+
+class QuizAPI(CourseAPI):
+    
+    QUIZ_LIST_URL_FORMAT = "{course_url}/quizzes"
+    QUIZ_QUESTIONS_URL_FORMAT = QUIZ_LIST_URL_FORMAT + "/{quiz_id}/questions"
+    
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.superargs = args
+        self.quiz_url = QuizAPI.QUIZ_LIST_URL_FORMAT.format(course_url = self.course_url)
+        self.quiz_questions_url = QuizAPI.QUIZ_QUESTIONS_URL_FORMAT.format(course_url = self.course_url)
+    
+    def get_quizzes(self, search=None):
+        payload = []
+        if search:
+            payload.append(("search_term", search))
+        response = self.get(
+            self.quiz_url,
+            params = payload
+        )
+        return response.json()
+
+    def get_quiz_questions(self, quiz_id):
+        url = self.quiz_questions_url.format(quiz_id = quiz_id)
+        response = self.get(
+            self.quiz_questions_url
+        )
+        return response.json()
+    
+
 class AssignmentGroupsAPI(CourseAPI):
 
     ASSIGNMENT_GROUPLIST_URL_FORMAT = "{course_url}/assignment_groups"

@@ -89,6 +89,16 @@ async function fix_broken_fill_in_blank(q_id, which_blank, worth, correct_answer
     leave_comment(q_id, comment, parent);
 }
 
+function full_credit_submission() {
+    var submission = document.getElementById("speedgrader_iframe");
+    if (submission === null) throw "no submission";
+    var grade_el = document.getElementById("grading-box-extended");
+    var points_possible_el = document.getElementById("grading-box-points-possible");
+    var points_possible = points_possible_el.innerHTML.trim().split(/\s+/)[3];
+    grade_el.value = points_possible;
+    $("#grading-box-extended").change();
+}
+
 // f takes the iframe as an argument
 async function all_students_apply(f, score_updates=true) {
     var first_student = which_student();
@@ -97,7 +107,7 @@ async function all_students_apply(f, score_updates=true) {
     do {
         next = document.getElementById("next-student-button");
         try {
-            iframe = document.getElementById("speedgrader_iframe").contentWindow.document
+            iframe = document.getElementById("speedgrader_iframe").contentWindow.document;
             await f(iframe);
             if (score_updates) {
                 await submit_scores(iframe);
@@ -111,7 +121,25 @@ async function all_students_apply(f, score_updates=true) {
         }
 
     } while (this_student != first_student);
+}
 
+async function all_students_apply_top_level_only(f) {
+    var first_student = which_student();
+    var this_student = first_student;
+    var next, iframe;
+    do {
+        next = document.getElementById("next-student-button");
+        try {
+            await f();
+        } catch (err) { 
+            console.log(err); 
+        } finally {
+            next.click();
+            await sleep(LOAD_TIME);
+            this_student = which_student();
+        }
+
+    } while (this_student != first_student);
 }
 
 async function give_max_points(question_ids, comments) {
@@ -122,4 +150,7 @@ async function investigate_essays(question_ids, char_limits, comments) {
 }
 async function fix_broken_fill_in_blank_all(q_id, which_blank, worth, correct_answer, comment) {
     await all_students_apply(fix_broken_fill_in_blank.bind(null, q_id, which_blank, worth, correct_answer, comment));
+}
+async function give_points_for_any_submission() {
+    await all_students_apply_top_level_only(full_credit_submission.bind(null));    
 }

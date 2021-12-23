@@ -4,8 +4,11 @@ import joblib
 import os
 import collections
 import functools
-
 import pathlib
+import re
+
+CANVAS_DASH_EXTENSION_RE = re.compile("-\d(.[a-zA-Z0-9]+)$")
+
 with open(os.path.join(pathlib.Path(__file__).parent, "canvas"),"r") as token_file:
     TOKEN = token_file.read().strip()
     if not TOKEN:
@@ -134,6 +137,41 @@ class AssignmentSubmissionsAPI(CourseAPI):
     def get_assignment_submissions(self):
         return self.get_paginated(self.get_assignment_submissions_page)
 
+    def download_assignment_submission_files(self, dl_dir='.'):
+        submissions = self.get_assignment_submissions()
+        for submission in submissions:
+            if "attachments" in submission:
+                for attachment in submission["attachments"]:
+                    file_content = requests.get(attachment["url"], allow_redirects=True)
+                    with open(os.path.abspath(os.path.join(dl_dir, str(submission["user"]["sis_user_id"]) + "_" + attachment["filename"])), 'wb') as f:
+                        f.write(file_content.content)
+
+    def download_assignment_submission_files_parallel(self, dl_dir='.', n_jobs=32, rm_canvas_dash_extensions=False):
+        submissions = self.get_assignment_submissions()
+        submission_attachment_urls = []
+        import pprint
+        with open("blah", "w") as f:
+            f.write(pprint.pformat(submissions))
+        for submission in submissions:
+            user_dir = os.path.join(dl_dir, submission["user"]["sortable_name"] + "_" + str(submission["user"]["sis_user_id"]))
+            if "attachments" in submission:
+                for attachment in submission["attachments"]:
+                    filename = attachment["filename"]
+                    if rm_canvas_dash_extensions:
+                        filename = CANVAS_DASH_EXTENSION_RE.sub(r'\g<1>', filename) 
+                    submission_attachment_urls.append(
+                        (user_dir, filename, attachment['url'])
+                    )
+        joblib.Parallel(n_jobs=n_jobs)(joblib.delayed(self.download_file_and_write_content)(fname, url, dl_dir=user_dir) 
+            for user_dir, fname, url in submission_attachment_urls)
+
+    def download_file_and_write_content(self, fname, url, dl_dir='.'):
+        file_content = requests.get(url, allow_redirects=True)
+        os.makedirs(dl_dir, exist_ok=True)
+        with open(os.path.abspath(os.path.join(dl_dir, fname)), 'wb') as f:
+            f.write(file_content.content)
+        
+
     def get_best_submission_by_user(self, submissions):
         # group by user
         user_submissions = collections.defaultdict(list)
@@ -188,6 +226,7 @@ def get_student_assignment_grades(course_id, n_jobs = 16):
     return user_scores, assignment_groups
     
 def get_gradebook(course_id):
+    import pandas as pd
     student_assignment_grades, assignment_groups = get_student_assignment_grades(course_id)
     users = set.union(*(
         set(student_assignment_grades[gid][aid].keys())
